@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EDR Security Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --yellow:#FFD700;--yellow-dim:#b89a00;--yellow-glow:rgba(255,215,0,0.15);
+    --bg:#080808;--bg2:#0f0f0f;--bg3:#161616;--border:#2a2a2a;
+    --text:#e8e8e8;--text-dim:#666;--red:#ff4444;--green:#00ff88;--blue:#4488ff;--orange:#ff8800;
+  }
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;min-height:100vh;overflow-x:hidden}
+  #matrix-bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;opacity:0.07;pointer-events:none}
+  body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:1}
+  .wrap{position:relative;z-index:2}
+  .topbar{background:rgba(10,10,10,0.95);border-bottom:2px solid var(--yellow);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(10px);box-shadow:0 0 30px rgba(255,215,0,0.12)}
+  .topbar-logo{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:var(--yellow);letter-spacing:2px;text-shadow:0 0 20px rgba(255,215,0,0.5);display:flex;align-items:center;gap:10px;white-space:nowrap}
+  .logo-icon{font-size:20px;animation:pulse-icon 2s infinite}
+  @keyframes pulse-icon{0%,100%{opacity:1}50%{opacity:0.5}}
+  .ticker-wrap{flex:1;margin:0 20px;overflow:hidden;border:1px solid var(--border);border-radius:4px;padding:4px 10px;background:var(--bg2);font-size:10px;color:var(--yellow-dim)}
+  .ticker-inner{display:inline-block;white-space:nowrap;animation:ticker 25s linear infinite}
+  @keyframes ticker{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
+  .topbar-right{display:flex;align-items:center;gap:14px;white-space:nowrap;font-size:11px}
+  .agent-badge{display:flex;align-items:center;gap:6px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.3);border-radius:20px;padding:4px 12px;color:var(--green)}
+  .pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s infinite;flex-shrink:0}
+  @keyframes pulse-dot{0%,100%{opacity:1;box-shadow:0 0 6px var(--green)}50%{opacity:0.3;box-shadow:none}}
+  .btn-pdf{background:linear-gradient(135deg,var(--yellow),#e6a800);color:#000;border:none;border-radius:6px;padding:6px 14px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;cursor:pointer;transition:all .2s;box-shadow:0 0 12px rgba(255,215,0,0.3);letter-spacing:0.5px}
+  .btn-pdf:hover{box-shadow:0 0 20px rgba(255,215,0,0.5);transform:translateY(-1px)}
+  .container{padding:20px 28px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+  .stat{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px 18px;position:relative;overflow:hidden;transition:border-color .2s}
+  .stat:hover{border-color:var(--yellow)}
+  .stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+  .stat.s-blue::before{background:linear-gradient(90deg,transparent,var(--blue),transparent)}
+  .stat.s-red::before{background:linear-gradient(90deg,transparent,var(--red),transparent)}
+  .stat.s-green::before{background:linear-gradient(90deg,transparent,var(--green),transparent)}
+  .stat.s-yellow::before{background:linear-gradient(90deg,transparent,var(--yellow),transparent)}
+  .stat .label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px}
+  .stat .num{font-family:'Orbitron',sans-serif;font-size:32px;font-weight:700;line-height:1}
+  .stat.s-blue .num{color:var(--blue);text-shadow:0 0 15px rgba(68,136,255,0.4)}
+  .stat.s-red .num{color:var(--red);text-shadow:0 0 15px rgba(255,68,68,0.4)}
+  .stat.s-green .num{color:var(--green);text-shadow:0 0 15px rgba(0,255,136,0.4)}
+  .stat.s-yellow .num{color:var(--yellow);text-shadow:0 0 15px rgba(255,215,0,0.4)}
+  .stat .icon{position:absolute;right:16px;top:16px;font-size:22px;opacity:0.15}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px;position:relative;overflow:hidden;transition:border-color .2s}
+  .card:hover{border-color:rgba(255,215,0,0.3)}
+  .card-title{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--yellow);padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  input,select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;margin-bottom:8px;font-size:12px;font-family:'JetBrains Mono',monospace;transition:border-color .2s;outline:none}
+  input:focus,select:focus{border-color:var(--yellow)}
+  select option{background:var(--bg3)}
+  .btn-add{background:var(--yellow);color:#000;border:none;border-radius:6px;padding:9px;width:100%;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;cursor:pointer;letter-spacing:1px;transition:all .2s;box-shadow:0 0 12px rgba(255,215,0,0.2)}
+  .btn-add:hover{box-shadow:0 0 20px rgba(255,215,0,0.4);transform:translateY(-1px)}
+  .btn-sm{background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:5px;padding:4px 10px;cursor:pointer;font-size:10px;font-family:'JetBrains Mono',monospace;transition:all .2s}
+  .btn-sm:hover{border-color:var(--yellow);color:var(--yellow)}
+  .btn-del{background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.3);color:var(--red);border-radius:5px;padding:4px 8px;cursor:pointer;font-size:10px;font-family:'JetBrains Mono',monospace;transition:all .2s}
+  .btn-del:hover{background:rgba(255,68,68,0.2);border-color:var(--red)}
+  .domain-list{max-height:200px;overflow-y:auto}
+  .domain-item{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;margin-bottom:6px;font-size:11px}
+  .domain-item span{color:var(--red);display:flex;align-items:center;gap:6px}
+  .domain-add-row{display:flex;gap:8px;margin-bottom:10px}
+  .domain-add-row input{margin:0;flex:1}
+  .btn-add-sm{background:var(--yellow);color:#000;border:none;border-radius:6px;padding:8px 14px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;transition:all .2s}
+  .btn-add-sm:hover{box-shadow:0 0 12px rgba(255,215,0,0.4)}
+  .events-box{max-height:300px;overflow-y:auto}
+  .ev{background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--yellow-dim);border-radius:6px;padding:10px 12px;margin-bottom:8px;font-size:11px;transition:border-color .2s}
+  .ev:hover{border-color:var(--yellow)}
+  .ev.sev-critical{border-left-color:var(--red)}
+  .ev.sev-high{border-left-color:var(--orange)}
+  .ev.sev-info{border-left-color:var(--blue)}
+  .ev-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+  .ev-type{color:var(--yellow);font-weight:700;font-size:11px}
+  .ev-ts{color:var(--text-dim);font-size:10px}
+  .ev-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  .badge{padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;letter-spacing:0.5px}
+  .b-critical{background:rgba(255,68,68,0.15);color:var(--red);border:1px solid rgba(255,68,68,0.3)}
+  .b-high{background:rgba(255,136,0,0.15);color:var(--orange);border:1px solid rgba(255,136,0,0.3)}
+  .b-info{background:rgba(68,136,255,0.15);color:var(--blue);border:1px solid rgba(68,136,255,0.3)}
+  .b-low{background:rgba(0,255,136,0.15);color:var(--green);border:1px solid rgba(0,255,136,0.3)}
+  .b-drop{background:rgba(255,68,68,0.15);color:var(--red);border:1px solid rgba(255,68,68,0.3)}
+  .b-accept{background:rgba(0,255,136,0.15);color:var(--green);border:1px solid rgba(0,255,136,0.3)}
+  .b-in{background:rgba(68,136,255,0.15);color:var(--blue);border:1px solid rgba(68,136,255,0.3)}
+  .b-out{background:rgba(255,215,0,0.15);color:var(--yellow);border:1px solid rgba(255,215,0,0.3)}
+  .b-mitre{background:rgba(180,100,255,0.15);color:#bb88ff;border:1px solid rgba(180,100,255,0.3)}
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  th{background:var(--bg3);color:var(--yellow-dim);padding:9px 10px;text-align:left;font-weight:600;letter-spacing:0.5px;border-bottom:1px solid var(--border)}
+  td{padding:9px 10px;border-bottom:1px solid rgba(42,42,42,0.5)}
+  tr:hover td{background:rgba(255,215,0,0.03)}
+  .empty{color:var(--text-dim);text-align:center;padding:24px;font-size:11px;letter-spacing:1px}
+  #toast{position:fixed;bottom:24px;right:24px;background:var(--yellow);color:#000;padding:10px 18px;border-radius:6px;font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;opacity:0;transition:opacity .3s;z-index:9999;pointer-events:none;box-shadow:0 0 20px rgba(255,215,0,0.4)}
+  #toast.show{opacity:1}
+  #toast.error{background:var(--red);color:#fff;box-shadow:0 0 20px rgba(255,68,68,0.4)}
+  ::-webkit-scrollbar{width:4px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--yellow-dim);border-radius:2px}
+  .threat-terminal{background:var(--bg2);border:1px solid var(--yellow);border-radius:10px;padding:0;margin-bottom:16px;overflow:hidden;box-shadow:0 0 30px rgba(255,215,0,0.05)}
+  .tt-header{background:var(--bg3);border-bottom:1px solid var(--yellow);padding:10px 18px;display:flex;align-items:center;justify-content:space-between}
+  .tt-title{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--yellow);letter-spacing:2px;display:flex;align-items:center;gap:8px}
+  .tt-body{padding:14px 18px;max-height:220px;overflow-y:auto;font-size:11px}
+  .tt-line{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(42,42,42,0.5);align-items:center}
+  .tt-line:last-child{border-bottom:none}
+  .tt-time{color:var(--text-dim);min-width:75px;font-size:10px}
+  .tt-sev{min-width:70px}
+  .tt-event{color:var(--text);flex:1}
+  .tt-host{color:var(--yellow-dim);min-width:80px;font-size:10px}
+</style>
+</head>
+<body>
+<canvas id="matrix-bg"></canvas>
+<div id="toast"></div>
+<div class="wrap">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <span class="logo-icon">🛡</span>
+      EDR&nbsp;SECURITY&nbsp;DASHBOARD
+    </div>
+    <div class="ticker-wrap">
+      <span class="ticker-inner" id="ticker">[ INITIALIZING THREAT MONITOR... ]</span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-pdf" id="pdf-btn" onclick="downloadPDF()">⬇ PDF REPORT</button>
+      <div class="agent-badge">
+        <span class="pulse-dot"></span>
+        <span id="agent-status">AGENT LIVE — AaruPC</span>
+        &nbsp;|&nbsp;
+        <span id="last-heartbeat" style="color:var(--yellow)">--:--</span>
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    <div class="stats">
+      <div class="stat s-blue"><div class="label">Active Rules</div><div class="num" id="s-rules">0</div><div class="icon">🔒</div></div>
+      <div class="stat s-red"><div class="label">DROP Rules</div><div class="num" id="s-drop">0</div><div class="icon">🚫</div></div>
+      <div class="stat s-green"><div class="label">Total Events</div><div class="num" id="s-events">0</div><div class="icon">📡</div></div>
+      <div class="stat s-yellow"><div class="label">Critical Alerts</div><div class="num" id="s-critical">0</div><div class="icon">⚠</div></div>
+    </div>
+    <div class="threat-terminal">
+      <div class="tt-header">
+        <div class="tt-title"><span>▶</span> LIVE THREAT FEED</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:10px;color:var(--text-dim)" id="threat-count">0 threats</span>
+          <button class="btn-sm" onclick="loadEvents()">↻ REFRESH</button>
+        </div>
+      </div>
+      <div class="tt-body" id="threat-feed"><div class="empty">[ AWAITING THREAT DATA... ]</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title"><span>⚡ ADD FIREWALL RULE</span></div>
+        <input type="text" id="r-id" placeholder="Rule ID (e.g. rule003)"/>
+        <select id="r-dir"><option value="inbound">Inbound</option><option value="outbound">Outbound</option></select>
+        <select id="r-proto"><option value="tcp">TCP</option><option value="udp">UDP</option></select>
+        <input type="number" id="r-port" placeholder="Port (e.g. 4444)"/>
+        <select id="r-action"><option value="DROP">DROP</option><option value="ACCEPT">ACCEPT</option></select>
+        <input type="number" id="r-priority" placeholder="Priority" value="1"/>
+        <button class="btn-add" onclick="addRule()">⚡ APPLY RULE</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><span>🌐 BLOCKED DOMAINS</span><button class="btn-sm" onclick="loadDomains()">↻ REFRESH</button></div>
+        <div class="domain-add-row">
+          <input type="text" id="d-domain" placeholder="e.g. evil.com"/>
+          <button class="btn-add-sm" onclick="addDomain()">+ ADD</button>
+        </div>
+        <div class="domain-list" id="domain-list"><div class="empty">[ NO DOMAINS BLOCKED ]</div></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title"><span>📋 SECURITY EVENTS</span><button class="btn-sm" onclick="loadEvents()">↻ REFRESH</button></div>
+        <div class="events-box" id="events-box"><div class="empty">[ LOADING... ]</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span>🔒 ACTIVE FIREWALL RULES</span><button class="btn-sm" onclick="loadRules()">↻ REFRESH</button></div>
+        <table>
+          <thead><tr><th>ID</th><th>DIR</th><th>PROTO</th><th>PORT</th><th>ACTION</th><th>DEL</th></tr></thead>
+          <tbody id="rules-tbody"><tr><td colspan="6" class="empty">[ LOADING... ]</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const canvas=document.getElementById('matrix-bg');
+const ctx=canvas.getContext('2d');
+canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+window.addEventListener('resize',()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight});
+const chars='01アイウエオカキクケコABCDEF{}[]<>/*+-=;:';
+const fontSize=13;
+const cols=Math.floor(canvas.width/fontSize);
+const drops=Array(cols).fill(1);
+function drawMatrix(){
+  ctx.fillStyle='rgba(8,8,8,0.05)';ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.font=fontSize+'px JetBrains Mono';
+  for(let i=0;i<drops.length;i++){
+    const char=chars[Math.floor(Math.random()*chars.length)];
+    const r=Math.random();
+    ctx.fillStyle=r>0.95?'#FFD700':r>0.7?'#b89a00':'#2a2a00';
+    ctx.fillText(char,i*fontSize,drops[i]*fontSize);
+    if(drops[i]*fontSize>canvas.height&&Math.random()>0.975)drops[i]=0;
+    drops[i]++;
+  }
+}
+setInterval(drawMatrix,50);
+const API="http://127.0.0.1:8000";const AI_API="http://127.0.0.1:8001";
+function showToast(msg,error=false){const t=document.getElementById("toast");t.textContent=msg;t.className="show"+(error?" error":"");setTimeout(()=>t.className="",3000)}
+async function loadRules(){try{const res=await fetch(`${API}/rules`);const rules=await res.json();document.getElementById("s-rules").textContent=rules.length;document.getElementById("s-drop").textContent=rules.filter(r=>r.action==="DROP").length;const tb=document.getElementById("rules-tbody");if(!rules.length){tb.innerHTML='<tr><td colspan="6" class="empty">[ NO RULES CONFIGURED ]</td></tr>';return;}tb.innerHTML=rules.map(r=>`<tr><td style="color:var(--yellow)">${r.id}</td><td><span class="badge ${r.direction==='inbound'?'b-in':'b-out'}">${r.direction.toUpperCase()}</span></td><td>${r.protocol.toUpperCase()}</td><td>${r.port||"ANY"}</td><td><span class="badge ${r.action==='DROP'?'b-drop':'b-accept'}">${r.action}</span></td><td><button class="btn-del" onclick="deleteRule('${r.id}')">✕</button></td></tr>`).join("");}catch(e){console.error(e)}}
+async function addRule(){const rule={id:document.getElementById("r-id").value,direction:document.getElementById("r-dir").value,protocol:document.getElementById("r-proto").value,port:parseInt(document.getElementById("r-port").value)||null,src_ip:null,dst_ip:null,action:document.getElementById("r-action").value,priority:parseInt(document.getElementById("r-priority").value)||1};if(!rule.id){showToast("[ ERROR: RULE ID REQUIRED ]",true);return;}await fetch(`${API}/rules`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(rule)});showToast("[ RULE APPLIED ]");loadRules();}
+async function deleteRule(id){await fetch(`${API}/rules/${id}`,{method:"DELETE"});showToast("[ RULE REMOVED ]");loadRules();}
+async function loadEvents(){try{const res=await fetch(`${API}/events`);const events=await res.json();document.getElementById("s-events").textContent=events.length;const critical=events.filter(e=>e.severity==="critical").length;document.getElementById("s-critical").textContent=critical;document.getElementById("threat-count").textContent=`${events.length} threats`;const box=document.getElementById("events-box");if(!events.length){box.innerHTML='<div class="empty">[ NO EVENTS LOGGED ]</div>';}else{box.innerHTML=events.slice(0,20).map(e=>`<div class="ev sev-${e.severity}"><div class="ev-header"><span class="ev-type">${e.event_type}</span><span class="ev-ts">${e.timestamp?.slice(0,19)||""}</span></div><div class="ev-meta"><span class="badge b-${e.severity}">${(e.severity||"").toUpperCase()}</span><span class="badge b-in">F${e.feature_id}</span><span class="badge b-mitre">🎯 ${e.mitre_id||"T0000"}</span><span style="color:var(--text-dim);font-size:10px">${e.hostname}</span></div></div>`).join("");}const feed=document.getElementById("threat-feed");if(!events.length){feed.innerHTML='<div class="empty">[ AWAITING THREAT DATA... ]</div>';}else{feed.innerHTML=events.slice(0,15).map(e=>{const sevColor=e.severity==="critical"?"var(--red)":e.severity==="high"?"var(--orange)":"var(--blue)";return`<div class="tt-line"><span class="tt-time">${e.timestamp?.slice(11,19)||"--:--:--"}</span><span class="tt-sev"><span class="badge b-${e.severity}">${(e.severity||"").toUpperCase()}</span></span><span class="tt-event" style="color:${sevColor}">${e.event_type}</span><span class="tt-host">${e.hostname}</span><span class="badge b-mitre" style="font-size:9px">${e.mitre_id||"T0000"}</span></div>`;}).join("");}const latest=events.slice(0,5).map(e=>`⚡ ${e.event_type} [${e.severity}] on ${e.hostname}`).join("   ///   ");document.getElementById("ticker").textContent=latest||"[ MONITORING ACTIVE ]";}catch(e){console.error(e)}}
+async function loadDomains(){try{const res=await fetch(`${API}/blocked-domains`);const domains=await res.json();const list=document.getElementById("domain-list");if(!domains.length){list.innerHTML='<div class="empty">[ NO DOMAINS BLOCKED ]</div>';return;}list.innerHTML=domains.map(d=>`<div class="domain-item"><span>🚫 ${d}</span><button class="btn-del" onclick="deleteDomain('${encodeURIComponent(d)}')">✕</button></div>`).join("");}catch(e){console.error(e)}}
+async function addDomain(){const domain=document.getElementById("d-domain").value.trim();if(!domain){showToast("[ ERROR: ENTER DOMAIN ]",true);return;}await fetch(`${API}/blocked-domains`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({domain})});document.getElementById("d-domain").value="";showToast(`[ BLOCKED: ${domain} ]`);loadDomains();}
+async function deleteDomain(domain){await fetch(`${API}/blocked-domains/${domain}`,{method:"DELETE"});showToast(`[ UNBLOCKED ]`);loadDomains();}
+async function loadHeartbeat(){try{const res=await fetch(`${API}/health`);const data=await res.json();if(data.status==="ok"){const now=new Date();document.getElementById("last-heartbeat").textContent=now.toTimeString().split(" ")[0];document.getElementById("agent-status").textContent="AGENT LIVE — AaruPC";}}catch(e){document.getElementById("agent-status").textContent="AGENT OFFLINE";document.getElementById("last-heartbeat").textContent="ERR";}}
+async function downloadPDF(){const btn=document.getElementById("pdf-btn");btn.textContent="⏳ GENERATING...";try{const res=await fetch(`${AI_API}/generate-pdf`);if(res.ok){const blob=await res.blob();const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`edr_report_${new Date().toISOString().slice(0,10)}.pdf`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);showToast("[ PDF DOWNLOADED ]");}else{showToast("[ PDF FAILED ]",true);}}catch(e){showToast("[ AI ENGINE NOT REACHABLE ]",true);}btn.textContent="⬇ PDF REPORT";}
+loadRules();loadEvents();loadDomains();loadHeartbeat();
+setInterval(()=>{loadRules();loadEvents();loadDomains();},10000);
+setInterval(loadHeartbeat,30000);
+</script>
+</body>
+</html>
