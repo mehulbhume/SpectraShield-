@@ -1,0 +1,16 @@
+[2026-06-08 16:12:37] FILE CREATED: monitored_folder\a.txt
+[2026-06-08 16:12:37] FILE CREATED: monitored_folder\b.txt
+[2026-06-08 16:12:37] FILE CREATED: monitored_folder\c.txt
+[2026-06-08 16:12:37] FILE CREATED: monitored_folder\d.txt
+[2026-06-08 16:12:38] FILE CREATED: monitored_folder\e.txt
+[2026-06-08 16:12:38] ALERT: Excessive File Creation Detected | Risk Score=25
+[2026-06-08 16:13:09] FILE DELETED: monitored_folder\a.txt
+[2026-06-08 16:13:09] FILE DELETED: monitored_folder\b.txt
+[2026-06-08 16:13:09] FILE DELETED: monitored_folder\c.txt
+[2026-06-08 16:13:09] FILE DELETED: monitored_folder\d.txt
+[2026-06-08 16:13:09] FILE DELETED: monitored_folder\e.txt
+[2026-06-08 16:13:09] ALERT: Excessive File Deletion Detected | Risk Score=75
+[2026-06-10 20:09:40] FILE CREATED: monitored_folder\a.txt
+[2026-06-10 20:09:46] FILE CREATED: monitored_folder\b.txt
+[2026-06-10 20:10:10] FILE DELETED: monitored_folder\a.txt
+[2026-06-10 20:10:16] FILE DELETED: monitored_folder\b.txt
